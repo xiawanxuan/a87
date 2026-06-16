@@ -51,6 +51,7 @@ export interface ScanImage {
   width: number;
   height: number;
   bitsDepth: number;
+  pixelScaleMm: number;
   scanDate?: string;
   operator?: string;
   equipment?: string;
@@ -143,7 +144,10 @@ export interface CanvasTransform {
 export interface AnnotationStats {
   totalCount: number;
   totalAreaPx: number;
+  totalAreaCm2: number;
+  pixelScaleMm: number;
   byDiseaseCount: Record<string, number>;
+  byDiseaseAreaCm2: Record<string, number>;
 }
 
 export interface ApiResponse<T = unknown> {

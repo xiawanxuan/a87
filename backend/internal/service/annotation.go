@@ -101,6 +101,10 @@ func (s *annotationSvc) CreateAnnotation(ctx context.Context, a *models.PolygonA
 	_ = a.Points.Scan(&points)
 	areaPx, bbox := repository.ComputeAreaAndBBox(points)
 	a.AreaPx = areaPx
+
+	pixelScale := s.getPixelScale(ctx, a.ScanImageID)
+	a.AreaCm2 = ComputeAreaCm2(areaPx, pixelScale)
+
 	b, _ := bboxToJSON(bbox)
 	a.BoundingBox = b
 	a.Operator = operator
@@ -108,6 +112,28 @@ func (s *annotationSvc) CreateAnnotation(ctx context.Context, a *models.PolygonA
 		return nil, err
 	}
 	return s.repo.GetByID(ctx, a.ID)
+}
+
+func (s *annotationSvc) getPixelScale(ctx context.Context, imageID uint64) float64 {
+	if s.imgRepo == nil {
+		return 0.1
+	}
+	img, err := s.imgRepo.GetByID(ctx, imageID)
+	if err != nil || img == nil {
+		return 0.1
+	}
+	if img.PixelScaleMm <= 0 {
+		return 0.1
+	}
+	return img.PixelScaleMm
+}
+
+func ComputeAreaCm2(areaPx float64, pixelScaleMm float64) float64 {
+	if pixelScaleMm <= 0 {
+		return 0
+	}
+	areaMm2 := areaPx * pixelScaleMm * pixelScaleMm
+	return areaMm2 / 100.0
 }
 
 func (s *annotationSvc) UpdateAnnotation(ctx context.Context, a *models.PolygonAnnotation, imageMaxW, imageMaxH int, operator string) error {
@@ -118,6 +144,10 @@ func (s *annotationSvc) UpdateAnnotation(ctx context.Context, a *models.PolygonA
 	_ = a.Points.Scan(&points)
 	areaPx, bbox := repository.ComputeAreaAndBBox(points)
 	a.AreaPx = areaPx
+
+	pixelScale := s.getPixelScale(ctx, a.ScanImageID)
+	a.AreaCm2 = ComputeAreaCm2(areaPx, pixelScale)
+
 	b, _ := bboxToJSON(bbox)
 	a.BoundingBox = b
 	a.Operator = operator
@@ -129,6 +159,7 @@ func (s *annotationSvc) DeleteAnnotation(ctx context.Context, id uint64, operato
 }
 
 func (s *annotationSvc) BulkReplace(ctx context.Context, imageID uint64, items []models.PolygonAnnotation, imageMaxW, imageMaxH int, operator string) error {
+	pixelScale := s.getPixelScale(ctx, imageID)
 	for i := range items {
 		items[i].ScanImageID = imageID
 		if errs := s.ValidateAnnotation(ctx, &items[i], imageMaxW, imageMaxH); len(errs) > 0 {
@@ -138,6 +169,7 @@ func (s *annotationSvc) BulkReplace(ctx context.Context, imageID uint64, items [
 		_ = items[i].Points.Scan(&points)
 		areaPx, bbox := repository.ComputeAreaAndBBox(points)
 		items[i].AreaPx = areaPx
+		items[i].AreaCm2 = ComputeAreaCm2(areaPx, pixelScale)
 		b, _ := bboxToJSON(bbox)
 		items[i].BoundingBox = b
 		items[i].Operator = operator
@@ -150,20 +182,36 @@ func (s *annotationSvc) ComputeStats(ctx context.Context, imageID uint64) (map[s
 	if err != nil {
 		return nil, err
 	}
-	totalArea := 0.0
+	pixelScale := s.getPixelScale(ctx, imageID)
+	totalAreaPx := 0.0
+	totalAreaCm2 := 0.0
 	byDisease := make(map[string]int)
+	byDiseaseAreaCm2 := make(map[string]float64)
 	for _, a := range list {
-		totalArea += a.AreaPx
+		totalAreaPx += a.AreaPx
+		if a.AreaCm2 > 0 {
+			totalAreaCm2 += a.AreaCm2
+		} else {
+			totalAreaCm2 += ComputeAreaCm2(a.AreaPx, pixelScale)
+		}
 		code := "unknown"
 		if a.DiseaseType != nil {
 			code = a.DiseaseType.Code
 		}
 		byDisease[code]++
+		if a.AreaCm2 > 0 {
+			byDiseaseAreaCm2[code] += a.AreaCm2
+		} else {
+			byDiseaseAreaCm2[code] += ComputeAreaCm2(a.AreaPx, pixelScale)
+		}
 	}
 	return map[string]interface{}{
-		"totalCount":      len(list),
-		"totalAreaPx":     totalArea,
-		"byDiseaseCount":  byDisease,
+		"totalCount":        len(list),
+		"totalAreaPx":       totalAreaPx,
+		"totalAreaCm2":      totalAreaCm2,
+		"pixelScaleMm":      pixelScale,
+		"byDiseaseCount":    byDisease,
+		"byDiseaseAreaCm2":  byDiseaseAreaCm2,
 	}, nil
 }
 

@@ -59,22 +59,23 @@ type DiseaseType struct {
 }
 
 type ScanImage struct {
-	ID          uint64    `gorm:"primaryKey" json:"id"`
-	ComponentID uint64    `gorm:"not null;index" json:"componentId"`
-	FileName    string    `gorm:"size:256;not null" json:"fileName"`
-	FilePath    string    `gorm:"size:512;not null" json:"filePath"`
-	FileSize    int64     `gorm:"not null;default:0" json:"fileSize"`
-	MimeType    string    `gorm:"size:64" json:"mimeType,omitempty"`
-	Width       int       `gorm:"not null;default:0" json:"width"`
-	Height      int       `gorm:"not null;default:0" json:"height"`
-	BitsDepth   int       `gorm:"not null;default:8" json:"bitsDepth"`
-	ScanDate    *time.Time `json:"scanDate,omitempty"`
-	Operator    string    `gorm:"size:64" json:"operator,omitempty"`
-	Equipment   string    `gorm:"size:128" json:"equipment,omitempty"`
-	Remark      string    `gorm:"type:text" json:"remark,omitempty"`
-	UploadedBy  string    `gorm:"size:64" json:"uploadedBy,omitempty"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID           uint64    `gorm:"primaryKey" json:"id"`
+	ComponentID  uint64    `gorm:"not null;index" json:"componentId"`
+	FileName     string    `gorm:"size:256;not null" json:"fileName"`
+	FilePath     string    `gorm:"size:512;not null" json:"filePath"`
+	FileSize     int64     `gorm:"not null;default:0" json:"fileSize"`
+	MimeType     string    `gorm:"size:64" json:"mimeType,omitempty"`
+	Width        int       `gorm:"not null;default:0" json:"width"`
+	Height       int       `gorm:"not null;default:0" json:"height"`
+	BitsDepth    int       `gorm:"not null;default:8" json:"bitsDepth"`
+	PixelScaleMm float64   `gorm:"not null;default:0.1" json:"pixelScaleMm"`
+	ScanDate     *time.Time `json:"scanDate,omitempty"`
+	Operator     string    `gorm:"size:64" json:"operator,omitempty"`
+	Equipment    string    `gorm:"size:128" json:"equipment,omitempty"`
+	Remark       string    `gorm:"type:text" json:"remark,omitempty"`
+	UploadedBy   string    `gorm:"size:64" json:"uploadedBy,omitempty"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 
 	Component *WoodComponent `gorm:"foreignKey:ComponentID" json:"component,omitempty"`
 }

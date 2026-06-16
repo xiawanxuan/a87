@@ -33,6 +33,8 @@ export function useCanvas(containerRef: { value: HTMLElement | null }) {
   const dpr = Math.max(1, window.devicePixelRatio || 1);
 
   const hoverPoint = ref<Point | null>(null);
+  const hoveredAnnotation = ref<PolygonAnnotation | null>(null);
+  const hoverScreenPos = ref<{ x: number; y: number }>({ x: 0, y: 0 });
   const drag = ref<DragState>({
     active: false, mode: null,
     startScreen: { x: 0, y: 0 }, startImage: { x: 0, y: 0 },
@@ -433,8 +435,10 @@ export function useCanvas(containerRef: { value: HTMLElement | null }) {
     if (!p) return;
     const imgPt = screenToImage(p.x, p.y, store.transform.scale, store.transform.offsetX, store.transform.offsetY);
     hoverPoint.value = imgPt;
+    hoverScreenPos.value = p;
 
     if (!drag.value.active) {
+      updateHoveredAnnotation(imgPt);
       updateCursorStyle(imgPt, effectiveTool(e));
       return;
     }
@@ -666,6 +670,22 @@ export function useCanvas(containerRef: { value: HTMLElement | null }) {
     return Math.abs(s) / 2;
   }
 
+  function updateHoveredAnnotation(pt: Point): void {
+    let found: PolygonAnnotation | null = null;
+    let smallestArea = Infinity;
+    for (const a of store.annotations) {
+      if (!a.points?.length) continue;
+      if (pointInPolygon(pt, a.points) || distanceToPolygonEdge(pt, a.points) < 3 / Math.max(0.1, store.transform.scale)) {
+        const area = polygonAreaImage(a.points);
+        if (area < smallestArea) {
+          smallestArea = area;
+          found = a;
+        }
+      }
+    }
+    hoveredAnnotation.value = found;
+  }
+
   function effectiveTool(e: PointerEvent | MouseEvent | KeyboardEvent): ToolType {
     if (e.altKey) return 'pan';
     if (e.ctrlKey || e.metaKey) return 'select';
@@ -849,7 +869,8 @@ export function useCanvas(containerRef: { value: HTMLElement | null }) {
 
   return {
     canvas, overlay, ctx2d, overlayCtx, imageEl, imageLoaded, imageLoading,
-    dpr, viewport, hoverPoint, drag, drawingPoints, gestureState,
+    dpr, viewport, hoverPoint, hoveredAnnotation, hoverScreenPos,
+    drag, drawingPoints, gestureState,
     resizeCanvas, requestRender, renderAll, markDirty,
     loadImage, setupResize,
     onPointerDown, onPointerMove, onPointerUp, onDblClick, onWheel, onKeyDown,

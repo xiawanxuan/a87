@@ -66,12 +66,15 @@ ON CONFLICT (code) DO NOTHING;
 
 -- 插入示例探伤图元数据（实际图片需通过系统上传）
 -- 为演示，我们创建一些模拟的4K探伤图记录
+-- pixel_scale_mm: 0.15 mm/px 表示每像素对应 0.15 毫米
+-- 4096像素 × 0.15mm = 614.4mm ≈ 61.4cm（约为一根大梁的横截面尺寸）
 WITH comp AS (SELECT id, code FROM wood_components WHERE code LIKE 'THD-liang-01-0%' LIMIT 4),
 imgs AS (
     SELECT comp.id, comp.code,
            '超声探伤图_' || comp.code || '_正面.png' as fname,
            4096 as w, 4096 as h,
            8 as bits,
+           0.15 as pscale,
            '2024-01-15'::date as sdate,
            '张工' as op,
            'USM-36' as equip,
@@ -80,14 +83,14 @@ imgs AS (
 )
 INSERT INTO scan_images (
     component_id, file_name, file_path, file_size,
-    mime_type, width, height, bits_depth,
+    mime_type, width, height, bits_depth, pixel_scale_mm,
     scan_date, operator, equipment, remark, uploaded_by
 ) SELECT
     imgs.id, imgs.fname,
     './uploads/demo/' || imgs.code || '/scan_front.png',
     16 * 1024 * 1024,
     'image/png',
-    imgs.w, imgs.h, imgs.bits,
+    imgs.w, imgs.h, imgs.bits, imgs.pscale,
     imgs.sdate, imgs.op, imgs.equip, imgs.remark, 'admin'
 FROM imgs
 ON CONFLICT DO NOTHING;
@@ -99,6 +102,7 @@ imgs AS (
            '超声探伤图_' || comp.code || '_侧面.png' as fname,
            4096 as w, 2048 as h,
            8 as bits,
+           0.20 as pscale,
            '2024-01-15'::date as sdate,
            '张工' as op,
            'USM-36' as equip,
@@ -107,14 +111,14 @@ imgs AS (
 )
 INSERT INTO scan_images (
     component_id, file_name, file_path, file_size,
-    mime_type, width, height, bits_depth,
+    mime_type, width, height, bits_depth, pixel_scale_mm,
     scan_date, operator, equipment, remark, uploaded_by
 ) SELECT
     imgs.id, imgs.fname,
     './uploads/demo/' || imgs.code || '/scan_side.png',
     8 * 1024 * 1024,
     'image/png',
-    imgs.w, imgs.h, imgs.bits,
+    imgs.w, imgs.h, imgs.bits, imgs.pscale,
     imgs.sdate, imgs.op, imgs.equip, imgs.remark, 'admin'
 FROM imgs
 ON CONFLICT DO NOTHING;

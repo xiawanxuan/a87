@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS scan_images (
     width           INT          NOT NULL DEFAULT 0,
     height          INT          NOT NULL DEFAULT 0,
     bits_depth      INT          NOT NULL DEFAULT 8,
+    pixel_scale_mm  DECIMAL(10,6) NOT NULL DEFAULT 0.1,
     scan_date       DATE,
     operator        VARCHAR(64),
     equipment       VARCHAR(128),

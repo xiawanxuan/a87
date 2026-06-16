@@ -48,11 +48,25 @@ function selectAnnotationItem(ann: PolygonAnnotation): void {
   store.selectAnnotation(ann.id, false);
 }
 
-function formatArea(px: number | undefined): string {
+function formatArea(px: number | undefined, cm2?: number | undefined): string {
   if (!px) return '-';
-  if (px < 10000) return px.toFixed(0) + ' px²';
-  if (px < 1000000) return (px / 1000).toFixed(1) + ' Kpx²';
-  return (px / 1000000).toFixed(2) + ' Mpx²';
+  const pxStr = px < 10000 ? px.toFixed(0) + ' px²'
+    : px < 1000000 ? (px / 1000).toFixed(1) + ' Kpx²'
+    : (px / 1000000).toFixed(2) + ' Mpx²';
+  if (cm2 && cm2 > 0) {
+    const cm2Str = cm2 < 1 ? (cm2 * 100).toFixed(1) + ' mm²'
+      : cm2 < 100 ? cm2.toFixed(2) + ' cm²'
+      : (cm2 / 100).toFixed(2) + ' dm²';
+    return `${pxStr} / ${cm2Str}`;
+  }
+  return pxStr;
+}
+
+function formatAreaCm2(cm2: number | undefined): string {
+  if (!cm2) return '-';
+  if (cm2 < 1) return (cm2 * 100).toFixed(1) + ' mm²';
+  if (cm2 < 100) return cm2.toFixed(2) + ' cm²';
+  return (cm2 / 100).toFixed(2) + ' dm²';
 }
 
 async function deleteAnnotation(id: number): Promise<void> {
@@ -141,9 +155,15 @@ const severityColors = ['', '#51cf66', '#94d82d', '#fcc419', '#ff922b', '#ff6b6b
           </div>
           <div class="stat-item">
             <div class="stat-value">
-              {{ formatArea(store.annotations.reduce((s, a) => s + (a.areaPx || 0), 0)) }}
+              {{ formatAreaCm2(store.annotations.reduce((s, a) => s + (a.areaCm2 || 0), 0)) }}
             </div>
-            <div class="stat-label">总面积</div>
+            <div class="stat-label">总面积 (cm²)</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">
+              {{ store.currentImage?.pixelScaleMm ? store.currentImage.pixelScaleMm.toFixed(2) : '0.10' }} mm/px
+            </div>
+            <div class="stat-label">像素比例</div>
           </div>
         </div>
       </div>
@@ -181,7 +201,7 @@ const severityColors = ['', '#51cf66', '#94d82d', '#fcc419', '#ff922b', '#ff6b6b
               </div>
               <div class="ann-meta">
                 <span class="ann-type">{{ diseaseName(ann.diseaseTypeId) }}</span>
-                <span class="ann-area">{{ formatArea(ann.areaPx) }}</span>
+                <span class="ann-area" :title="`像素面积: ${ann.areaPx?.toFixed(0) || 0} px²`">{{ formatAreaCm2(ann.areaCm2) }}</span>
                 <span class="ann-time">{{ formatTime(ann.createdAt) }}</span>
               </div>
               <div v-if="ann.note" class="ann-note">{{ ann.note }}</div>

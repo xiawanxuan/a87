@@ -13,6 +13,7 @@ const containerRef = ref<HTMLDivElement | null>(null);
 
 const {
   canvas, overlay, imageLoaded, imageLoading, markDirty,
+  hoveredAnnotation, hoverScreenPos,
   resizeCanvas, loadImage, setupResize,
   onPointerDown, onPointerMove, onPointerUp, onDblClick, onWheel, onKeyDown,
   prevent,
@@ -67,6 +68,38 @@ const collabCursors = computed(() => {
 
 function cursorColor(userId: string): string {
   return colorForUser(userId);
+}
+
+function formatAreaCm2(cm2: number | undefined): string {
+  if (!cm2) return '-';
+  if (cm2 < 1) return (cm2 * 100).toFixed(1) + ' mm²';
+  if (cm2 < 100) return cm2.toFixed(2) + ' cm²';
+  return (cm2 / 100).toFixed(2) + ' dm²';
+}
+
+function formatAreaPx(px: number | undefined): string {
+  if (!px) return '-';
+  if (px < 10000) return px.toFixed(0) + ' px²';
+  if (px < 1000000) return (px / 1000).toFixed(1) + ' Kpx²';
+  return (px / 1000000).toFixed(2) + ' Mpx²';
+}
+
+const tooltipStyle = computed(() => {
+  if (!hoveredAnnotation.value) return { display: 'none' };
+  const x = hoverScreenPos.value.x + 12;
+  const y = hoverScreenPos.value.y + 12;
+  return {
+    left: x + 'px',
+    top: y + 'px',
+  };
+});
+
+function diseaseName(diseaseTypeId: number): string {
+  return store.diseaseTypeMap.get(diseaseTypeId)?.name || '未知';
+}
+
+function diseaseColor(diseaseTypeId: number): string {
+  return store.diseaseTypeMap.get(diseaseTypeId)?.colorHex || '#FF6B6B';
 }
 
 onMounted(() => {
@@ -140,6 +173,48 @@ onBeforeUnmount(() => {
       </div>
       <div v-if="store.collabUsers.length > 6" class="user-avatar more">
         +{{ store.collabUsers.length - 6 }}
+      </div>
+    </div>
+
+    <div v-if="hoveredAnnotation" class="annotation-tooltip" :style="tooltipStyle">
+      <div class="tooltip-header">
+        <span class="tooltip-color-dot" :style="{ background: diseaseColor(hoveredAnnotation.diseaseTypeId) }" />
+        <span class="tooltip-title">{{ hoveredAnnotation.label || `标注 #${hoveredAnnotation.id}` }}</span>
+      </div>
+      <div class="tooltip-body">
+        <div class="tooltip-row">
+          <span class="tooltip-label">病害类型</span>
+          <span class="tooltip-value">{{ diseaseName(hoveredAnnotation.diseaseTypeId) }}</span>
+        </div>
+        <div class="tooltip-row">
+          <span class="tooltip-label">严重等级</span>
+          <span class="tooltip-value">
+            <el-rate
+              :model-value="hoveredAnnotation.severity"
+              disabled
+              :max="5"
+              size="small"
+              :colors="['#51cf66', '#94d82d', '#fcc419', '#ff922b', '#ff6b6b']"
+            />
+          </span>
+        </div>
+        <div class="tooltip-divider" />
+        <div class="tooltip-row">
+          <span class="tooltip-label">实际面积</span>
+          <span class="tooltip-value highlight">{{ formatAreaCm2(hoveredAnnotation.areaCm2) }}</span>
+        </div>
+        <div class="tooltip-row">
+          <span class="tooltip-label">像素面积</span>
+          <span class="tooltip-value">{{ formatAreaPx(hoveredAnnotation.areaPx) }}</span>
+        </div>
+        <div class="tooltip-row">
+          <span class="tooltip-label">顶点数</span>
+          <span class="tooltip-value">{{ hoveredAnnotation.points?.length || 0 }}</span>
+        </div>
+        <div v-if="hoveredAnnotation.operator" class="tooltip-row">
+          <span class="tooltip-label">操作人</span>
+          <span class="tooltip-value">{{ hoveredAnnotation.operator }}</span>
+        </div>
       </div>
     </div>
   </div>
@@ -268,6 +343,75 @@ onBeforeUnmount(() => {
   border-radius: 3px;
   white-space: nowrap;
   font-weight: 500;
+}
+
+.annotation-tooltip {
+  position: absolute;
+  z-index: 20;
+  pointer-events: none;
+  background: rgba(26, 32, 44, 0.96);
+  border: 1px solid rgba(74, 85, 104, 0.8);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  min-width: 200px;
+  max-width: 260px;
+  backdrop-filter: blur(8px);
+}
+
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(74, 85, 104, 0.5);
+}
+
+.tooltip-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tooltip-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tooltip-body {
+  padding: 8px 12px;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.tooltip-label {
+  color: #718096;
+}
+
+.tooltip-value {
+  color: #cbd5e0;
+  font-variant-numeric: tabular-nums;
+
+  &.highlight {
+    color: #4dabf7;
+    font-weight: 600;
+  }
+}
+
+.tooltip-divider {
+  height: 1px;
+  background: rgba(74, 85, 104, 0.4);
+  margin: 6px 0;
 }
 
 @keyframes spin {
