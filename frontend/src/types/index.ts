@@ -122,8 +122,9 @@ export interface OperationMessage<T = unknown> {
   type: OperationType | string;
   userId: string;
   userName?: string;
-  ts: number;
-  seq?: number;
+  ts?: number;
+  timestamp?: number;
+  seq: number;
   payload?: T;
 }
 

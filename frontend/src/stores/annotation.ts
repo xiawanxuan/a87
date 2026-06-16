@@ -123,7 +123,27 @@ export const useAnnotationStore = defineStore('annotation', () => {
     globalWs.disconnect();
     globalWs.connect(imageId);
     globalWs.events.on('message', handleWsMessage);
-    globalWs.events.on('open', () => refreshCollabUsers(imageId));
+    globalWs.events.on('open', () => {
+      refreshCollabUsers(imageId);
+      console.info('[store] ws connected, current seq:', globalWs.getLastProcessedSeq());
+    });
+    globalWs.events.on('sync', (sync) => {
+      console.info('[store] ws sync received, replaying', sync.messageCount, 'messages');
+    });
+    globalWs.events.on('gap', (gap) => {
+      console.warn('[store] ws seq gap detected, missing', gap.missing.length, 'messages, triggering full reload');
+      if (currentImage.value) {
+        AnnotationApi.listByImage(currentImage.value.id).then((list) => {
+          annotations.value = list;
+          console.info('[store] full state reloaded after gap:', list.length, 'annotations');
+        }).catch((e) => {
+          error.value = (e as Error).message;
+        });
+      }
+    });
+    globalWs.events.on('close', (e) => {
+      console.warn('[store] ws disconnected, code:', e.code, 'reason:', e.reason);
+    });
   }
 
   function handleWsMessage(msg: OperationMessage): void {

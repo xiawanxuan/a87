@@ -68,6 +68,10 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Recovery(), middleware.RequestLogger())
 	r.Use(middleware.CORSMiddleware([]string{"*"}))
+	r.Use(func(c *gin.Context) {
+		c.Set("wsHub", hub)
+		c.Next()
+	})
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok", "time": time.Now().Format(time.RFC3339)})
