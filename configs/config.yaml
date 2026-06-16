@@ -1,0 +1,27 @@
+server:
+  port: 8080
+  mode: debug
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: postgres
+  dbname: ultrasound_db
+  sslmode: disable
+  timezone: Asia/Shanghai
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 30
+
+upload:
+  dir: ./uploads
+  max_size: 52428800
+
+annotation:
+  max_versions: 30
+  sync_interval_ms: 200
